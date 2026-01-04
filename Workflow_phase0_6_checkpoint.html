@@ -11,7 +11,7 @@
 
 <meta name="author" content="Madelyne Zhang" />
 
-<meta name="date" content="2026-01-03" />
+<meta name="date" content="2026-01-04" />
 
 <title>Whale Shark Movement Project</title>
 
@@ -1458,7 +1458,7 @@ border-radius: 0px;
 <h1 class="title toc-ignore">Whale Shark Movement Project</h1>
 <h3 class="subtitle">Phase 0–6 Methods Workflow</h3>
 <h4 class="author">Madelyne Zhang</h4>
-<h4 class="date">2026-01-03</h4>
+<h4 class="date">2026-01-04</h4>
 
 </div>
 
@@ -1538,6 +1538,10 @@ border-radius: 0px;
 <h1><span class="header-section-number">8</span> Phase 6: Mapping and movement visualization</h1>
 <p>This phase focuses on visualizing reconstructed movement tracks together with movement persistence that highlights large-scale patterns and individual differences. Movement tracks were visualized for individual sharks using faceted maps, with track segments colored by the estimated movement persistence value. A consistent map projection was used across individuals to allow comparison of spatial extent,as well as additional zoomed views for representative sharks.</p>
 <p>By coloring tracks with a continuous movement persistence measure, the maps emphasize gradual behavioural variation along trajectories rather than discrete behavioural switching. The mapping outputs from this phase serve primarily as an exploratory and interpretive tool, helping to link reconstructed movement paths with continuous behavioural dynamics.</p>
+</div>
+<div id="modification" class="section level1" number="9">
+<h1><span class="header-section-number">9</span> Modification</h1>
+<p>After running the full pipeline, several issues became apparent. In particular, some tracks contained very large temporal gaps, and in a few cases the reconstructed paths crossed over land, which is not physically plausible. Rather than discarding these sharks entirely, I revisited their observation histories and split the tracks into separate segments based on the large gaps. The same modelling pipeline was then applied to each segment independently. This adjustment allowed the reconstructed tracks to remain biologically plausible, while still making use of the available observations as much as possible.</p>
 </div>
 
 
