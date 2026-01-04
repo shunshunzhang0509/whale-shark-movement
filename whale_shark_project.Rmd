@@ -38,8 +38,15 @@ library(aniMotum)
 ```{r}
 sharks <- read_csv("final_whale_shark.csv")
 
-sharks <- sharks  %>%
-    mutate(date = ymd_hms(date))
+sharks %>% 
+  count(id)
+
+sharks <- sharks %>%
+  mutate(
+    date = stringr::str_replace(date, "-\\s+", "-"),
+    date = ymd_hms(date)
+  )
+
 ```
 
 ```{r}
@@ -52,6 +59,60 @@ sharks %>%
 ```{r}
 # Summary of Argos location classes
 sharks %>% count(lc)
+```
+
+```{r}
+sharks <- sharks %>%  
+  arrange(id,date)
+sharks <- sharks %>%
+  filter(!is.na(date))
+
+# Largest time gap data check 
+sharks %>% 
+  filter (id == "172246")
+sharks %>% 
+  filter (id == "157790")
+
+sharks %>% 
+  filter (id =="203637")
+sharks %>% 
+  filter (id =="203638")
+sharks %>% 
+  filter (id =="203639")
+sharks %>% 
+  filter (id =="203644")
+sharks %>% 
+  filter (id =="203646")
+```
+
+
+```{r}
+# Split for individuals with large temporal gaps - 172246 and 157790
+# Also with 5 sharks that have huge movement that is "across the continent" after the MPM interpolation, which doesn't make sense biologically, so I headed back here at first to split these 5 sharks observations in advance. 
+
+split_table <- tibble(
+  id = c(
+    "172246",
+    "157790",
+    "203637",
+    "203638",
+    "203639",
+    "203644",
+    "203646"
+  ),
+  split_time = ymd_hms(c(
+    "2017-09-30 16:21:00",
+    "2018-03-28 22:30:00",
+    "2020-06-13 03:50:58",
+    "2020-06-14 01:25:45",
+    "2020-06-13 03:52:39",
+    "2020-06-13 03:52:00",
+    "2019-09-08 17:44:00"
+    
+  ))
+)
+
+
 ```
 
 ### EDA
@@ -109,6 +170,27 @@ ggplot(sharks_dt, aes(x = dt_hours)) +
 
 ```
 
+
+```{r}
+sharks <- sharks %>%
+  mutate(id = as.character(id))
+
+sharks <- sharks %>%
+  left_join(split_table, by = "id") %>%
+  mutate(
+    id = case_when(
+      is.na(split_time) ~ id,
+      date <= split_time ~ paste0(id, "_a"),
+      date >  split_time ~ paste0(id, "_b")
+    )
+  ) %>%
+  select(-split_time)
+
+sharks %>% 
+  count(id)
+```
+Initially, the raw df contains 60 sharks, but since two of them have long time gap which caused non-convergence in the first attempt of MPM, and 5 of the sharks' movement track contains the "over-continent" track, which doesn't make sense biologically, so these sharks are split into _a and _b to make further analysis. Therefore, with 7 sharks split to _a and _b, 67 sharks are remained. 
+
 ```{r}
 # Raw Spatial tracks for each individual(points)
 ggplot(sharks, aes(x = lon, y = lat)) +
@@ -132,7 +214,7 @@ ggplot(sharks, aes(x = lon, y = lat)) +
 p1 <- ggplot() +
   theme_bw() +
   geom_point(
-    data = sharks %>% dplyr::filter(id == "203637"),
+    data = sharks %>% dplyr::filter(id == "203637_a"),
     aes(x = lon, y = lat)
   )
 
@@ -142,7 +224,7 @@ print(p1)
 p2 <- ggplot() +
   theme_bw() +
   geom_path(
-    data = sharks %>% dplyr::filter(id == "203637"),
+    data = sharks %>% dplyr::filter(id == "203637_a"),
     aes(x = lon, y = lat)
   )
 
@@ -183,7 +265,7 @@ Approximately 12% of observed movement steps exceeded a biologically informed ma
 
 #### Sanity check
 
-Since the SSM model needs at least 3 points to fit, there are 8 sharks with less than 3 observations, which will be excluded from our further analysis.
+Since the SSM model needs at least 3 points to fit, there are 9 sharks with less than 3 observations, which will be excluded from our further analysis.
 
 ```{r}
 # Exclude individuals with fewer than three observations 
@@ -195,9 +277,12 @@ sharks_ssm <- sharks %>%
   group_by(id) %>%
   filter(n() >= 3) %>%
   ungroup()
+
+sharks_ssm %>% 
+  count(id)
 ```
 
-52 sharks remaining in the sharks_ssm dataframe.
+58 sharks remaining in the sharks_ssm dataframe.
 
 ```{r}
 # Sanity check 
@@ -226,7 +311,7 @@ sharks_ssm %>%
 
 ```
 
-For the sharks that have \>= 3 observations, there are 15 observations of NA date, 15 observations of inf date.
+For the sharks that have >= 3 observations, there are 0 observations of NA date as they were initially filted out. 
 There are also non_increasing_time observations, which will be excluded.
 
 ```{r}
@@ -236,12 +321,6 @@ problem_ids <- sharks_ssm %>%
   summarise(any_non_increasing_time = any(diff(date) <= 0, na.rm = TRUE)) %>%
   filter(any_non_increasing_time) %>%
   pull(id)
-
-sharks_ssm %>%
-  filter(id %in% problem_ids) %>%
-  arrange(id, date) %>%
-  select(id, date, lon, lat) %>%
-  print(n = 100)
 ```
 
 ```{r}
@@ -253,7 +332,7 @@ sharks_ssm %>%
   arrange(desc(n))
 ```
 
-2 duplicated entries found, will be removed.
+1 duplicated entries found, will be removed.
 
 #### Cleaning dataset for the SSM
 
@@ -284,7 +363,7 @@ sharks_ssm_clean <- sharks %>%
   ungroup()
 ```
 
-In sharks_ssm_clean, all 52 sharks have at least three valid observations with valid timestamps and locations.
+In sharks_ssm_clean, all 58 sharks have at least three valid observations with valid timestamps and locations.
 
 ```{r}
 # Sanity check for clean data 
@@ -298,10 +377,9 @@ sharks_ssm_clean %>%
   group_by(id) %>%
   summarise(any_bad_time = any(diff(date) <= 0)) %>%
   filter(any_bad_time)
-
 ```
 
-There are 52 sharks (12144 entries) remaining.
+There are 58 sharks (12142 entries) remaining.
 
 ### SSM Model Fit
 
@@ -345,17 +423,16 @@ pull(id)
 nonconv_ids
 ```
 
-Two individuals (157790 and 172246) did not converge.
-Their observation histories were examined in relation to temporal gaps.
+One individuals ("172246_b") did not converge.
 
 ```{r}
 # Inspect observation histories of non-converged individuals
 sharks_ssm_clean %>% 
-  filter(id == 157790)
-
-sharks_ssm_clean %>% 
-  filter(id == 172246)
+  filter(id == "172246_b")
 ```
+
+2017 jumped to 2020, which is probably the reason of non-convergence.
+
 
 ```{r}
 # Retain SSM fits that converged with a positive-definite Hessian
@@ -370,7 +447,7 @@ pull(id)
 ssm_excluded_ids
 ```
 
-After excluding non-converged fits, 50 sharks remained for further analysis.
+After excluding non-converged fits, 57 sharks remained for further analysis.
 
 ```{r}
 # Extract fitted and predicted locations from valid SSM fits only
@@ -407,7 +484,7 @@ Individuals with extremely sparse observations showed high positional uncertaint
 
 ```{r}
 # Individual with one of the largest temporal gaps between observations
-large_gap_id <- "203646"
+large_gap_id <- "112557"
 
 plot(
 ssm_valid |> dplyr::filter(id == large_gap_id),
@@ -425,10 +502,10 @@ type = 2
 
 ```{r}
 sharks_ssm_clean %>% 
-  filter(id == "203646")
+  filter(id == "112557")
 ```
 
-For this shark (id =203646), the shark has only 9 observations in 2019, with a gap of almost one year, followed by the observation almost one year, where the one year in between have huge uncertainties according to the graph.
+For this shark (id =112557), the shark has only 54 observations in 2012, with a gap of almost one year, followed by the observation almost one year, where the one year in between have huge uncertainties according to the graph.
 
 ```{r}
 # Individual with a more typical observation pattern
@@ -486,7 +563,7 @@ print(raw_164968)
 
 ```
 
-All 52 shark tracks were visualized on a spatial shapefile:
+All 57 shark tracks were visualized on a spatial shapefile:
 
 ```{r}
 # Visualize predicted tracks for all converged individuals
@@ -509,7 +586,7 @@ ACF
 # - large temporal gaps
 # - typical observation pattern
 
-diagnostic_ids <- c("132071", "203646", "164968")
+diagnostic_ids <- c("132071", "112557", "164968")
 
 ssm_diag <- ssm_valid |>
 dplyr::filter(id %in% diagnostic_ids)
@@ -544,11 +621,11 @@ Overall, the diagnostic plots do not raise major concerns about model fit.
 Residuals show no clear trends over time, their distribution is broadly consistent with model assumptions, and there is little remaining autocorrelation.
 This suggests the fitted state-space model adequately captures the movement dynamics in the data.
 
-Note: Since 175953 and 203646 failed to converge in MPM in later steps, their diagnostics are checked
+Note: Since 175953 and 203646_b failed to converge in MPM in later steps, their diagnostics are checked
 
 ```{r}
 # Additional SSM diagnostics for individuals that later failed MPM convergence
-diagnostic_ids_MPM_failed <- c("175953", "203646")
+diagnostic_ids_MPM_failed <- c("175953", "203646_b")
 
 ssm_diag_MPM_failed <- ssm_valid |>
 dplyr::filter(id %in% diagnostic_ids_MPM_failed)
@@ -582,10 +659,9 @@ For the shark with id = 175953, the maximum time gap between consecutive observa
 Despite this long gap, the SSM diagnostics do not show clear violations of model assumptions.
 The residuals are generally centered around zero without strong temporal trends, the QQ plots show only mild tail deviations, and the ACF plots for both x and y mostly fall within the confidence bounds, indicating that temporal dependence is adequately captured by the CRW model.
 
-In contrast, the shark with id = 203646 shows signs of non-stationarity in the SSM diagnostics.
-The residuals display a strong upward trend at early timestamps before stabilizing around zero later, resulting in an asymmetric residual pattern over time.
-The ACF plots also suggest subtle temporal structure, with differences between the x and y components.
-While the SSM converges, these features likely lead to unstable estimation of movement persistence, explaining the failure of MPM convergence for this individual.
+For the shark with id = 203646_b, the SSM diagnostics for this individual do not show major violations of model assumptions.
+Residuals are centred around zero with no strong temporal trends, their distribution broadly follows model expectations, and there is little remaining autocorrelation in either spatial dimension.
+These results suggest that the CRW-based state-space model provides an adequate description of the movement process for this track.
 
 ### MPM (Move Persistence Model)
 
@@ -606,10 +682,17 @@ control = mpm_control(verbose = 0)
 
 # Basic visual check of fitted MPM output
 plot(pmm_fit, pages = 1)
+
 ```
 
-After excluding individuals with fewer than 20 predicted locations, 35 sharks were retained for MPM fitting.
-Among these, the model did not converge for two individuals (175953 and 203646), which were excluded from subsequent analyses.
+
+```{r}
+# Dataframe with indicators of convergence of MPM
+pmm_fit
+```
+
+After excluding individuals with fewer than 20 predicted locations, 33 sharks were retained for MPM fitting.
+Among these, the model did not converge for two individuals (175953 and 203646_b), which were excluded from subsequent analyses.
 
 ### Data Extraction and preparation
 
@@ -838,8 +921,8 @@ variable     = variable_persistence_candidates$id
 # (illustrating different persistence patterns)
 
 rep_ids <- c(
-  "175950",  # typical
-  "203637",  # high persistence
+  "184025",  # typical
+  "139119",  # high persistence
   "184029",  # low persistence
   "220359"   # variable
 )
@@ -934,7 +1017,7 @@ ggplot() +
 ```
 
 The overview map uses a shared spatial scale across individuals, which facilitates comparison of movement extent but compresses trajectories with smaller spatial ranges.
-To highlight individual-level movement geometry, we additionally present maps zoomed to the spatial extent of each track.
+To highlight individual-level movement geometry, there are additionally maps zoomed to the spatial extent of each track.
 
 ```{r}
 # Zoom in map
@@ -1006,7 +1089,7 @@ prj <- "+proj=laea +lat_0=0 +lon_0=-90 +datum=WGS84 +units=m +no_defs"
 # Typical 
 plot_one_shark_map(
   latent_data = latent_movement,
-  shark_id = "175950",
+  shark_id = "184025",
   behaviour_label = "Typical",
   prj = prj,
   buffer_km = 300
@@ -1015,7 +1098,7 @@ plot_one_shark_map(
 # High persistence
 plot_one_shark_map(
   latent_data = latent_movement,
-  shark_id = "203637",
+  shark_id = "139119",
   behaviour_label = "High persistence",
   prj = prj,
   buffer_km = 500   
@@ -1043,13 +1126,12 @@ plot_one_shark_map(
 ```
 
 ```{r}
+# Check 
 plot_one_shark_map(
   latent_data = latent_movement,
-  shark_id = "203645",
+  shark_id = "203646_b",
   behaviour_label = "/",
   prj = prj,
   buffer_km = 500   
 )
 ```
-
-
