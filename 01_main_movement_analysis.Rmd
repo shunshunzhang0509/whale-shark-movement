@@ -1129,9 +1129,14 @@ plot_one_shark_map(
 # Check 
 plot_one_shark_map(
   latent_data = latent_movement,
-  shark_id = "203646_b",
+  shark_id = "172246",
   behaviour_label = "/",
   prj = prj,
   buffer_km = 500   
 )
 ```
+
+```{r}
+saveRDS(sharks_ssm_clean, "sharks_ssm_clean.rds")
+```
+
