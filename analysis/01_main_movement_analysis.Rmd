@@ -680,9 +680,32 @@ model = "mpm",
 control = mpm_control(verbose = 0)
 )
 
-# Basic visual check of fitted MPM output
-plot(pmm_fit, pages = 1)
+# MPM varying gamma visulization for selected sharks
+rep_ids_gamma <- c("184025", "139119", "184029", "220359")
 
+pmm_data_sub <- sharks_predicted %>%
+  dplyr::filter(id %in% rep_ids_gamma) %>%
+  dplyr::group_by(id) %>%
+  dplyr::filter(dplyr::n() >= 20) %>%
+  dplyr::ungroup()
+
+pmm_fit_sub <- fit_mpm(
+  pmm_data_sub,
+  model = "mpm",
+  control = mpm_control(verbose = 0)
+)
+
+p_mpm <- plot(pmm_fit_sub, pages = 1)
+print(p_mpm)
+
+# Save plot
+ggsave(
+  filename = "g_over_time_representative_sharks.png",
+  plot = p_mpm,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
 ```
 
 
@@ -989,7 +1012,7 @@ world <- rnaturalearth::ne_countries(
 world_proj <- world %>%
   sf::st_transform(crs = prj)
 
-ggplot() +
+p_g_spatial<- ggplot() +
   theme_bw() +
   geom_sf(
     data = world_proj,
@@ -1014,6 +1037,18 @@ ggplot() +
     expand = FALSE
   ) +
   facet_wrap(~ behaviour + id, ncol = 2)
+
+print(p_g_spatial)
+
+# Save Plot
+ggsave(
+  filename = "g_spatial_representative_sharks.png",
+  plot = p_g_spatial,
+  width = 8,
+  height = 6,
+  dpi = 300
+)
+
 ```
 
 The overview map uses a shared spatial scale across individuals, which facilitates comparison of movement extent but compresses trajectories with smaller spatial ranges.
