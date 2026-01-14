@@ -65,6 +65,7 @@ ssm_48
 ssm_na
 
 ```
+
 The three models with different time steps all converged. 
 
 #### Comparison of fitted locations
@@ -97,6 +98,7 @@ bind_rows(fitted_24, fitted_48, fitted_na) %>%
   )
 
 ```
+
 For this individual, the fitted latent locations were very similar across time.step = 24, 48, and NA, indicating that the SSM reconstruction is not sensitive to the choice of time step.
 
 ### Move persistence model fitting
@@ -173,6 +175,7 @@ bind_rows(g_24, g_48, g_na) %>%
     y = expression(gamma[t])
   )
 ```
+
 Movement persistence estimates were highly consistent between 24 h and 48 h regularization, whereas estimates based on irregular observation times (time.step = NA) showed markedly different behaviour, supporting the use of regularized predicted locations for MPM inference.
 
 ### Shark track visualization on different time steps
@@ -223,6 +226,7 @@ ggplot() +
   )
 
 ```
+
 Shark 139119 has only five observed satellite locations. Under 24 h and 48 h temporal regularization, the reconstructed tracks are very similar and the estimated move persistence remains consistently high along the path. When time.step = NA, inference is restricted to the sparse fitted locations, resulting in fewer points and less stable behaviour estimates. This case is therefore treated as an extreme example, and the same sensitivity analysis is repeated below for an individual with a typical number of observations.
 
 
@@ -269,6 +273,7 @@ ssm2_48
 ssm2_na
 
 ```
+
 The three models with different time steps all converged. 
 
 #### Comparison of fitted locations
@@ -301,6 +306,7 @@ bind_rows(fitted2_24, fitted2_48, fitted2_na) %>%
   )
 
 ```
+
 For this individual, the fitted latent locations were very similar across time.step = 24, 48, and NA, indicating that the SSM reconstruction is not sensitive to the choice of time step.
 
 ### Move persistence model fitting
@@ -377,6 +383,7 @@ bind_rows(g2_24, g2_48, g2_na) %>%
     y = expression(gamma[t])
   )
 ```
+
 For shark 220359, γₜ varies substantially over time under both 24 h and 48 h regulaization, with similar timing of transitions between low and high persistence. In contrast, estimates based on time.step = NA rely on a small number of irregular observation times and show abrupt changes driven by individual observations.
 
 ### Shark track visualization on different time steps
