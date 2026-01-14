@@ -216,7 +216,7 @@ df_sf <- df_all %>%
   st_set_crs(4326)
 
 # ggplot
-ggplot() +
+p_ts1 <- ggplot() +
   theme_bw() +
   geom_sf(aes(colour = g), data = df_sf, show.legend = "point") +
   scale_color_viridis_c(expression(gamma[t]), limits = c(0, 1)) +
@@ -225,6 +225,15 @@ ggplot() +
     title = paste("MPM sensitivity to time step:", sens_id1)
   )
 
+print(p_ts1)
+# Save Plot
+ggsave(
+  filename = "g_spatial_timestep_comparison1.png",
+  plot = p_ts1,
+  width = 9,
+  height = 4,
+  dpi = 300
+)
 ```
 
 Shark 139119 has only five observed satellite locations. Under 24 h and 48 h temporal regularization, the reconstructed tracks are very similar and the estimated move persistence remains consistently high along the path. When time.step = NA, inference is restricted to the sparse fitted locations, resulting in fewer points and less stable behaviour estimates. This case is therefore treated as an extreme example, and the same sensitivity analysis is repeated below for an individual with a typical number of observations.
@@ -424,7 +433,7 @@ df2_sf <- df2_all %>%
   st_set_crs(4326)
 
 # ggplot
-ggplot() +
+p_ts2 <- ggplot() +
   theme_bw() +
   geom_sf(aes(colour = g), data = df2_sf, show.legend = "point") +
   scale_color_viridis_c(expression(gamma[t]), limits = c(0, 1)) +
@@ -433,6 +442,16 @@ ggplot() +
     title = paste("MPM sensitivity to time step:", sens_id2)
   )
 
+print(p_ts2)
+
+# Save figures to folder 
+ggsave(
+  filename = "g_spatial_timestep_comparison2.png",
+  plot = p_ts2,
+  width = 9,
+  height = 4,
+  dpi = 300
+)
 ```
 
 The 24 h and 48 h regularisations yield comparable overall movement patterns but differ in the spatial resolution of γₜ, with stronger temporal aggregation under the 48 h time step. The NA case is restricted by the small number of observed locations.
