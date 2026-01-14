@@ -1,5 +1,7 @@
 ---
 title: "02_time_step_sensitivity"
+author: "Madelyne Zhang"
+date: "`r Sys.Date()`"
 output: html_document
 ---
 
