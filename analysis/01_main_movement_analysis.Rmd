@@ -1164,7 +1164,7 @@ plot_one_shark_map(
 # Check 
 plot_one_shark_map(
   latent_data = latent_movement,
-  shark_id = "172246",
+  shark_id = "203645",
   behaviour_label = "/",
   prj = prj,
   buffer_km = 500   
