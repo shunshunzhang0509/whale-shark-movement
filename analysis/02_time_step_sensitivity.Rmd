@@ -197,7 +197,7 @@ df_48 <- df_locs_48 %>%
   left_join(df_mpm_48, by = c("id", "date")) %>%
   mutate(model = "48h")
 
-# NA Since NA doesn't have predicted, so we visaulze it using fitted 
+# NA Since NA doesn't have predicted, so we visualize it using fitted 
 df_locs_na <- ssm_na %>% grab("fitted")
 df_mpm_na  <- mpm_na %>% grab("fitted")
 
@@ -414,7 +414,7 @@ df2_48 <- df2_locs_48 %>%
   left_join(df2_mpm_48, by = c("id", "date")) %>%
   mutate(model = "48h")
 
-# NA Since NA doesn't have predicted, so we visaulze it using fitted 
+# NA Since NA doesn't have predicted, so we visualize it using fitted 
 df2_locs_na <- ssm2_na %>% grab("fitted")
 df2_mpm_na  <- mpm2_na %>% grab("fitted")
 
@@ -455,3 +455,224 @@ ggsave(
 ```
 
 The 24 h and 48 h regularisations yield comparable overall movement patterns but differ in the spatial resolution of γₜ, with stronger temporal aggregation under the 48 h time step. The NA case is restricted by the small number of observed locations.
+
+
+### Individual 3: Typical gamma shark case (ID = 184025)
+
+```{r}
+# Select the shark with typical movement persistence
+sens_id3 <- "184025"
+
+shark_dat_3 <- sharks_ssm_clean %>%
+  filter(id == sens_id3)
+```
+
+### State-space model fitting under different time steps
+
+```{r}
+# Three SSM with different time steps
+ssm3_24 <- fit_ssm(
+  x = shark_dat_3,
+  model = "crw",
+  time.step = 24,
+  vmax = 2.7,
+  control = ssm_control(verbose = 0)
+)
+
+ssm3_48 <- fit_ssm(
+  x = shark_dat_3,
+  model = "crw",
+  time.step = 48,
+  vmax = 2.7,
+  control = ssm_control(verbose = 0)
+)
+
+ssm3_na <- fit_ssm(
+  x = shark_dat_3,
+  model = "crw",
+  time.step = NA,
+  vmax = 2.7,
+  control = ssm_control(verbose = 0)
+)
+
+ssm3_24
+ssm3_48
+ssm3_na
+
+```
+
+The three models with different time steps all converged. 
+
+#### Comparison of fitted locations
+
+```{r}
+# Extract fitted locations (at observation times)
+fitted3_24 <- grab(ssm3_24, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "24h")
+
+fitted3_48 <- grab(ssm3_48, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "48h")
+
+fitted3_na <- grab(ssm3_na, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "NA")
+```
+
+```{r}
+bind_rows(fitted3_24, fitted3_48, fitted3_na) %>%
+  ggplot(aes(x = lon, y = lat, colour = model)) +
+  geom_point(size = 2) +
+  facet_wrap(~ model) +
+  theme_bw() +
+  labs(
+    title = paste("SSM fitted locations by time step:", sens_id3),
+    x = "Longitude",
+    y = "Latitude"
+  )
+
+```
+
+For this individual, the fitted latent locations were very similar across time.step = 24, 48, and NA, indicating that the SSM reconstruction is not sensitive to the choice of time step.
+
+### Move persistence model fitting
+
+```{r}
+# Three MPM models 
+pred3_24 <- grab(ssm3_24, what = "predicted") %>%
+  as_tibble() %>%
+  mutate(model = "24h")
+
+pred3_48 <- grab(ssm3_48, what = "predicted") %>%
+  as_tibble() %>%
+  mutate(model = "48h")
+
+pred3_na <- grab(ssm3_na, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "NA")
+
+```
+
+```{r}
+mpm3_24 <- fit_mpm(
+  pred3_24,
+  model = "mpm",
+  control = mpm_control(verbose = 0)
+)
+
+```
+
+```{r}
+mpm3_48 <- fit_mpm(
+  pred3_48,
+  model = "mpm",
+  control = mpm_control(verbose = 0)
+)
+
+```
+
+```{r}
+mpm3_na <- fit_mpm(
+  pred3_na,
+  model = "mpm",
+  control = mpm_control(verbose = 0)
+)
+
+```
+
+
+```{r}
+g3_24 <- grab(mpm3_24, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "24h")
+
+g3_48 <- grab(mpm3_48, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "48h")
+
+g3_na <- grab(mpm3_na, what = "fitted") %>%
+  as_tibble() %>%
+  mutate(model = "NA")
+
+```
+
+#### Sensitivity of move persistence estimates
+
+```{r}
+bind_rows(g3_24, g3_48, g3_na) %>%
+  ggplot(aes(x = date, y = g, colour = model)) +
+  geom_line() +
+  facet_wrap(~ model, scales = "free_x") +
+  theme_bw() +
+  labs(
+    title = paste("MPM sensitivity to time step:", sens_id3),
+    x = "Date",
+    y = expression(gamma[t])
+  )
+```
+
+For this individual, γₜ estimates are stable and highly similar under 24 h and 48 h regularization. Estimates based on irregular observation times exhibit markedly higher short-term variability.
+
+### Shark track visualization on different time steps
+
+```{r}
+# 24h
+df3_locs_24 <- ssm3_24 %>% grab("predicted")
+df3_mpm_24  <- mpm3_24 %>% grab("fitted")
+
+df3_24 <- df3_locs_24 %>%
+  left_join(df3_mpm_24, by = c("id", "date")) %>%
+  mutate(model = "24h")
+
+# 48h
+df3_locs_48 <- ssm3_48 %>% grab("predicted")
+df3_mpm_48  <- mpm3_48 %>% grab("fitted")
+
+df3_48 <- df3_locs_48 %>%
+  left_join(df3_mpm_48, by = c("id", "date")) %>%
+  mutate(model = "48h")
+
+# NA Since NA doesn't have predicted, so we visualize it using fitted 
+df3_locs_na <- ssm3_na %>% grab("fitted")
+df3_mpm_na  <- mpm3_na %>% grab("fitted")
+
+df3_na <- df3_locs_na %>%
+  left_join(df3_mpm_na, by = c("id", "date")) %>%
+  mutate(model = "NA")
+
+```
+
+```{r}
+df3_all <- bind_rows(df3_24, df3_48, df3_na)
+
+# Transform to sf
+df3_sf <- df3_all %>%
+  st_as_sf(coords = c("lon", "lat")) %>%
+  st_set_crs(4326)
+
+# ggplot
+p_ts3 <- ggplot() +
+  theme_bw() +
+  geom_sf(aes(colour = g), data = df3_sf, show.legend = "point") +
+  scale_color_viridis_c(expression(gamma[t]), limits = c(0, 1)) +
+  facet_wrap(~ model, nrow = 1) +
+  labs(
+    title = paste("MPM sensitivity to time step:", sens_id3)
+  )
+
+print(p_ts3)
+
+# Save figures to folder 
+ggsave(
+  filename = "g_spatial_timestep_comparison3.png",
+  plot = p_ts3,
+  width = 9,
+  height = 4,
+  dpi = 300
+)
+```
+
+This shark has very dense locations and a smooth, continuous track across all time steps.
+For 24 h and 48 h, γₜ stays high and looks almost constant along the path.
+With time.step = NA, the track becomes much denser and γₜ shows some local variation in colour, although values are still mostly high overall.
